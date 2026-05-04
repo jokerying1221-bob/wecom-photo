@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<!-- saved from url=(0041)file:///Users/b.ying/Downloads/index.html -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>收货拍照</title>
+<script src="./收货拍照_files/jweixin-1.6.0.js"></script>
+<style>
+:root {
+  --blue: #1677FF;
+  --blue-light: #E8F1FF;
+  --green: #00B578;
+  --green-light: #E8FFF4;
+  --red: #FF3141;
+  --red-light: #FFF0F0;
+  --orange: #FF8C00;
+  --orange-light: #FFF7E8;
+  --gray1: #1A1A1A;
+  --gray2: #4A4A4A;
+  --gray3: #8A8A8A;
+  --gray4: #C8C8C8;
+  --gray5: #F5F5F5;
+  --border: #EBEBEB;
+  --white: #FFFFFF;
+  --radius: 10px;
+  --safe-bottom: env(safe-area-inset-bottom, 16px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--gray5); font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif; }
+
+/* ── NAV BAR ── */
+.nav { position: sticky; top: 0; z-index: 100; background: var(--white); border-bottom: 0.5px solid var(--border); height: 48px; display: flex; align-items: center; padding: 0 8px; }
+.nav-back { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.nav-back svg { width: 22px; height: 22px; }
+.nav-title { flex: 1; text-align: center; font-size: 16px; font-weight: 600; color: var(--gray1); }
+.nav-action { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--blue); cursor: pointer; }
+
+/* ── PROGRESS STEPS ── */
+.steps { display: flex; background: var(--white); padding: 12px 16px 10px; border-bottom: 0.5px solid var(--border); }
+.step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+.step:not(:last-child)::after { content: ''; position: absolute; top: 11px; left: calc(50% + 13px); right: calc(-50% + 13px); height: 1px; background: var(--border); }
+.step:not(:last-child).done::after { background: var(--green); }
+.step-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+.step-dot.idle { background: var(--gray5); color: var(--gray3); border: 1px solid var(--border); }
+.step-dot.cur  { background: var(--blue); color: var(--white); }
+.step-dot.done { background: var(--green); color: var(--white); }
+.step-label { font-size: 10px; color: var(--gray3); margin-top: 3px; white-space: nowrap; }
+.step-label.cur { color: var(--blue); font-weight: 600; }
+.step-label.done { color: var(--green); }
+
+/* ── CARDS ── */
+.card { background: var(--white); border-radius: var(--radius); margin: 10px 12px 0; overflow: hidden; }
+.card-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 0.5px solid var(--border); }
+.card-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.card-icon svg { width: 16px; height: 16px; }
+.card-title { font-size: 14px; font-weight: 600; color: var(--gray1); flex: 1; }
+.tag { font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+.tag-must { background: var(--red-light); color: var(--red); }
+.tag-opt  { background: var(--orange-light); color: var(--orange); }
+.tag-done { background: var(--green-light); color: var(--green); }
+
+/* ── FORM ROWS ── */
+.row { display: flex; align-items: center; padding: 13px 14px; border-bottom: 0.5px solid var(--border); min-height: 48px; }
+.row:last-child { border-bottom: none; }
+.row-label { font-size: 13px; color: var(--gray3); width: 72px; flex-shrink: 0; }
+.row-val { font-size: 14px; color: var(--gray1); flex: 1; }
+.row-val.placeholder { color: var(--gray4); }
+.row-arrow { width: 16px; height: 16px; stroke: var(--gray4); fill: none; }
+
+/* ── PHOTO GRID ── */
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px; }
+.photo-cell { aspect-ratio: 1; border-radius: 8px; background: var(--gray5); border: 1px dashed var(--gray4); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; -webkit-user-select: none; }
+.photo-cell.taken { border-style: solid; border-color: var(--border); }
+.photo-cell svg.add-icon { width: 24px; height: 24px; stroke: var(--gray4); fill: none; }
+.photo-cell .cell-label { font-size: 10px; color: var(--gray3); margin-top: 4px; text-align: center; line-height: 1.3; }
+.photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-del { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; background: rgba(0,0,0,.45); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.photo-del svg { width: 10px; height: 10px; stroke: #fff; fill: none; stroke-width: 2.5; }
+.photo-badge { position: absolute; bottom: 3px; left: 3px; background: rgba(0,0,0,.45); color: #fff; font-size: 9px; padding: 1px 5px; border-radius: 4px; }
+
+/* ── TIP ── */
+.tip { display: flex; align-items: flex-start; gap: 6px; padding: 8px 14px; border-top: 0.5px solid var(--border); background: var(--gray5); }
+.tip svg { width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px; fill: none; }
+.tip span { font-size: 11px; color: var(--gray3); line-height: 1.5; }
+
+/* ── QUANTITY STEPPER ── */
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--gray5); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--gray2); cursor: pointer; line-height: 1; flex-shrink: 0; }
+.stepper-val { font-size: 16px; font-weight: 600; color: var(--gray1); min-width: 40px; text-align: center; }
+
+/* ── QUALITY CHIPS ── */
+.chip-group { display: flex; gap: 8px; padding: 12px 14px; flex-wrap: wrap; }
+.chip { padding: 8px 18px; border-radius: 99px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); color: var(--gray2); background: var(--gray5); cursor: pointer; transition: all .15s; }
+.chip.sel-ok  { background: var(--green-light); color: var(--green); border-color: var(--green); }
+.chip.sel-warn{ background: var(--orange-light); color: var(--orange); border-color: var(--orange); }
+.chip.sel-err { background: var(--red-light); color: var(--red); border-color: var(--red); }
+
+/* ── ALERT BOX ── */
+.alert { display: flex; align-items: flex-start; gap: 8px; margin: 0 12px; padding: 10px 12px; border-radius: var(--radius); }
+.alert svg { width: 15px; height: 15px; fill: none; flex-shrink: 0; margin-top: 1px; }
+.alert span { font-size: 12px; line-height: 1.6; }
+.alert-warn { background: var(--orange-light); }
+.alert-warn svg { stroke: var(--orange); }
+.alert-warn span { color: var(--orange); }
+.alert-err  { background: var(--red-light); }
+.alert-err  svg { stroke: var(--red); }
+.alert-err  span { color: var(--red); }
+
+/* ── CHECKLIST SUMMARY ── */
+.check-item { display: flex; align-items: center; padding: 11px 14px; border-bottom: 0.5px solid var(--border); gap: 10px; }
+.check-item:last-child { border-bottom: none; }
+.check-thumb { width: 40px; height: 40px; border-radius: 6px; background: var(--gray5); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.check-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.check-thumb.ok { background: var(--green-light); }
+.check-thumb.miss { background: var(--red-light); }
+.check-meta { flex: 1; min-width: 0; }
+.check-name { font-size: 13px; font-weight: 500; color: var(--gray1); }
+.check-sub  { font-size: 11px; color: var(--gray3); margin-top: 2px; }
+.check-status { font-size: 11px; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+.cs-ok   { background: var(--green-light); color: var(--green); }
+.cs-miss { background: var(--red-light); color: var(--red); }
+.cs-opt  { background: var(--orange-light); color: var(--orange); }
+
+/* ── BOTTOM BAR ── */
+.bottom-bar { position: sticky; bottom: 0; background: var(--white); border-top: 0.5px solid var(--border); padding: 10px 16px; padding-bottom: calc(10px + var(--safe-bottom)); display: flex; gap: 10px; z-index: 100; }
+.btn-main { flex: 2; height: 44px; background: var(--blue); color: var(--white); border: none; border-radius: 22px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; -webkit-appearance: none; }
+.btn-main:active { opacity: .85; }
+.btn-main.green { background: var(--green); }
+.btn-sub  { flex: 1; height: 44px; background: var(--gray5); color: var(--gray2); border: none; border-radius: 22px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-sub:active { opacity: .75; }
+
+/* ── SUCCESS ── */
+.success-wrap { display: flex; flex-direction: column; align-items: center; padding: 40px 24px 24px; }
+.success-circle { width: 64px; height: 64px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.success-circle svg { width: 32px; height: 32px; stroke: var(--green); fill: none; stroke-width: 2; }
+.success-title { font-size: 18px; font-weight: 700; color: var(--gray1); margin-bottom: 6px; }
+.success-sub { font-size: 13px; color: var(--gray3); text-align: center; line-height: 1.6; margin-bottom: 20px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-bottom: 20px; }
+.stat-box { background: var(--gray5); border-radius: var(--radius); padding: 12px; text-align: center; }
+.stat-num { font-size: 22px; font-weight: 700; color: var(--gray1); }
+.stat-lbl { font-size: 11px; color: var(--gray3); margin-top: 2px; }
+
+/* ── PAGE VISIBILITY ── */
+.page { display: none; }
+.page.active { display: block; }
+.spacer { height: 12px; }
+
+/* ── TEXTAREA ── */
+textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--gray1); font-family: inherit; resize: none; background: var(--gray5); outline: none; -webkit-appearance: none; }
+textarea:focus { border-color: var(--blue); background: var(--white); }
+.textarea-wrap { padding: 10px 14px 14px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-back" onclick="goBack()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+  </div>
+  <div class="nav-title" id="navTitle">收货拍照</div>
+  <div class="nav-action" id="navRight" onclick="navAction()"></div>
+</div>
+
+<!-- STEP PROGRESS -->
+<div class="steps" id="stepBar">
+  <div class="step" id="s0"><div class="step-dot cur" id="sd0">1</div><div class="step-label cur" id="sl0">确认信息</div></div>
+  <div class="step" id="s1"><div class="step-dot idle" id="sd1">2</div><div class="step-label" id="sl1">拍照记录</div></div>
+  <div class="step" id="s2"><div class="step-dot idle" id="sd2">3</div><div class="step-label" id="sl2">质量验收</div></div>
+  <div class="step" id="s3"><div class="step-dot idle" id="sd3">4</div><div class="step-label" id="sl3">提交归档</div></div>
+</div>
+
+<!-- ════ PAGE 0: 信息确认 ════ -->
+<div class="page active" id="page0">
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 7h8M8 11h8M8 15h5"></path></svg>
+      </div>
+      <span class="card-title">收货单信息</span>
+    </div>
+    <div class="row"><span class="row-label">收货单号</span><span class="row-val">RCV-2026-0504-001</span></div>
+    <div class="row"><span class="row-label">供应商</span><span class="row-val">华润优选食品有限公司</span></div>
+    <div class="row"><span class="row-label">货物品类</span><span class="row-val">冷冻食品 · 3 SKU</span></div>
+    <div class="row"><span class="row-label">应收数量</span><span class="row-val">120 件</span></div>
+    <div class="row"><span class="row-label">运输方式</span><span class="row-val">冷链运输</span></div>
+    <div class="row" onclick="selectWarehouse()" style="cursor:pointer">
+      <span class="row-label">入库仓库</span>
+      <span class="row-val placeholder" id="warehouseVal">请选择仓库</span>
+      <svg class="row-arrow" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:10px">
+    <div class="card-head">
+      <div class="card-icon" style="background:#FFF7E8">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="1.8" stroke-linecap="round"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path></svg>
+      </div>
+      <span class="card-title">本次拍照要求</span>
+    </div>
+    <div class="row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px 14px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="tag tag-must">必拍 4 类</span>
+        <span class="tag tag-opt">如有则拍 2 类</span>
+      </div>
+      <div style="font-size:12px;color:#8A8A8A;line-height:1.7">
+        必拍：外包装全景 · 标签特写 · 卸货现场 · 随货单据<br>
+        如有则拍：异常损坏 · 冷链温控记录
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="bottom-bar">
+    <button class="btn-sub" onclick="scanQR()">扫码填单</button>
+    <button class="btn-main" onclick="goNext()">开始拍照 →</button>
+  </div>
+</div>
+
+<!-- ════ PAGE 1: 拍照记录 ════ -->
+<div class="page" id="page1">
+
+  <!-- 外包装 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </div>
+      <span class="card-title">外包装全景</span>
+      <span class="tag tag-must" id="tagOuter">必拍</span>
+    </div>
+    <div class="photo-grid" id="gridOuter"><div class="photo-cell"><svg viewbox="0 0 24 24" class="add-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"></path></svg><span class="cell-label">点击拍照</span></div></div>
+    <div class="tip">
+      <svg viewBox="0 0 24 24" stroke="#8A8A8A" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4m0-4h.01"></path></svg>
+      <span>货物外包装正面完整入镜，包含品名和数量标识，光线充足，清晰不模糊</span>
+    </div>
+  </div>
+
+  <!-- 标签特写 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </div>
+      <span class="card-title">标签/批次号特写</span>
+      <span class="tag tag-must" id="tagLabel">必拍</span>
+    </div>
+    <div class="photo-grid" id="gridLabel"><div class="photo-cell"><svg viewbox="0 0 24 24" class="add-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"></path></svg><span class="cell-label">点击拍照</span></div></div>
+    <div class="tip">
+      <svg viewBox="0 0 24 24" stroke="#8A8A8A" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4m0-4h.01"></path></svg>
+      <span>品名、规格、批次号、生产日期均须清晰可读，正面垂直拍摄，避免反光</span>
+    </div>
+  </div>
+
+  <!-- 卸货现场 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </div>
+      <span class="card-title">卸货现场全景</span>
+      <span class="tag tag-must" id="tagScene">必拍</span>
+    </div>
+    <div class="photo-grid" id="gridScene"><div class="photo-cell"><svg viewbox="0 0 24 24" class="add-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"></path></svg><span class="cell-label">点击拍照</span></div></div>
+    <div class="tip">
+      <svg viewBox="0 0 24 24" stroke="#8A8A8A" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4m0-4h.01"></path></svg>
+      <span>货物落地码放后全景，体现数量规模，建议俯拍或45°角</span>
+    </div>
+  </div>
+
+  <!-- 随货单据 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </div>
+      <span class="card-title">随货单据</span>
+      <span class="tag tag-must" id="tagDoc">必拍</span>
+    </div>
+    <div class="photo-grid" id="gridDoc"><div class="photo-cell"><svg viewbox="0 0 24 24" class="add-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"></path></svg><span class="cell-label">点击拍照</span></div></div>
+    <div class="tip">
+      <svg viewBox="0 0 24 24" stroke="#8A8A8A" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4m0-4h.01"></path></svg>
+      <span>装箱单、合格证、检验报告平铺拍摄，全页入镜，内容完整可读</span>
+    </div>
+  </div>
+
+  <!-- 异常损坏（可选） -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#FFF7E8">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="1.8" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"></path></svg>
+      </div>
+      <span class="card-title">异常损坏记录</span>
+      <span class="tag tag-opt">如有则拍</span>
+    </div>
+    <div class="photo-grid" id="gridDamage"><div class="photo-cell"><svg viewbox="0 0 24 24" class="add-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"></path></svg><span class="cell-label">点击拍照</span></div></div>
+    <div class="tip">
+      <svg viewBox="0 0 24 24" stroke="#FF8C00" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4m0-4h.01"></path></svg>
+      <span style="color:#FF8C00">发现破损/受潮须立即拍特写及整体全景，并在质量验收步骤标注</span>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="bottom-bar">
+    <button class="btn-sub" onclick="goPrev()">上一步</button>
+    <button class="btn-main" id="btnNext1" onclick="checkPhotosAndNext()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ════ PAGE 2: 质量验收 ════ -->
+<div class="page" id="page2">
+  <!-- 数量 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#E8FFF4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00B578" stroke-width="1.8" stroke-linecap="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>
+      </div>
+      <span class="card-title">实收数量核对</span>
+    </div>
+    <div class="row">
+      <span class="row-label">应收</span>
+      <span class="row-val">120 件</span>
+    </div>
+    <div class="row">
+      <span class="row-label">实收</span>
+      <div class="stepper">
+        <div class="stepper-btn" onclick="adjQty(-1)">−</div>
+        <span class="stepper-val" id="qtyVal">118</span>
+        <div class="stepper-btn" onclick="adjQty(1)">+</div>
+      </div>
+      <span style="font-size:13px;color:#8A8A8A;margin-left:4px">件</span>
+    </div>
+    <div class="row">
+      <span class="row-label">差异</span>
+      <span id="diffVal" style="font-size:14px;font-weight:600;color:#FF3141">-2 件（短少）</span>
+    </div>
+  </div>
+
+  <!-- 质量判定 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#E8FFF4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00B578" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path></svg>
+      </div>
+      <span class="card-title">质量判定</span>
+    </div>
+    <div class="chip-group">
+      <div class="chip sel-ok" id="chip0" onclick="pickQual(0)">合格入库</div>
+      <div class="chip" id="chip1" onclick="pickQual(1)">待质检</div>
+      <div class="chip" id="chip2" onclick="pickQual(2)">拒收退货</div>
+    </div>
+  </div>
+
+  <!-- 外包装状态 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"></path></svg>
+      </div>
+      <span class="card-title">外包装状态</span>
+    </div>
+    <div class="chip-group">
+      <div class="chip sel-ok" id="pkg0" onclick="pickPkg(0)">完好</div>
+      <div class="chip" id="pkg1" onclick="pickPkg(1)">轻微破损</div>
+      <div class="chip" id="pkg2" onclick="pickPkg(2)">严重破损</div>
+      <div class="chip" id="pkg3" onclick="pickPkg(3)">受潮</div>
+    </div>
+  </div>
+
+  <div class="alert alert-warn" style="margin-top:10px">
+    <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"></path></svg>
+    <span>数量短少 2 件，请在备注中说明差异原因，并在提交后通知采购跟进处理。</span>
+  </div>
+
+  <!-- 备注 -->
+  <div class="card" style="margin-top:10px">
+    <div class="card-head">
+      <div class="card-icon" style="background:#F5F5F5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" stroke-width="1.8" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      </div>
+      <span class="card-title">备注说明</span>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="remark" rows="3" placeholder="输入异常原因、差异说明或其他备注…" maxlength="200"></textarea>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="bottom-bar">
+    <button class="btn-sub" onclick="goPrev()">上一步</button>
+    <button class="btn-main" onclick="goNext()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ════ PAGE 3: 提交确认 ════ -->
+<div class="page" id="page3">
+  <!-- 照片清单 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#EEF3FF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      </div>
+      <span class="card-title">照片清单确认</span>
+    </div>
+    <div id="photoChecklist"></div>
+  </div>
+
+  <!-- 收货信息汇总 -->
+  <div class="card" style="margin-top:10px">
+    <div class="card-head">
+      <div class="card-icon" style="background:#E8FFF4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00B578" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </div>
+      <span class="card-title">收货摘要</span>
+    </div>
+    <div class="row"><span class="row-label">实收数量</span><span class="row-val" id="sumQty">118 件</span></div>
+    <div class="row"><span class="row-label">数量差异</span><span id="sumDiff" class="row-val" style="color:#FF3141">-2 件（短少）</span></div>
+    <div class="row"><span class="row-label">质量判定</span><span class="row-val" style="color:#00B578">合格入库</span></div>
+    <div class="row"><span class="row-label">收货员</span><span class="row-val" id="sumUser">加载中…</span></div>
+    <div class="row"><span class="row-label">收货时间</span><span class="row-val" id="sumTime"></span></div>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="bottom-bar">
+    <button class="btn-sub" onclick="goPrev()">上一步</button>
+    <button class="btn-main green" onclick="submitForm()">提交收货单</button>
+  </div>
+</div>
+
+<!-- ════ PAGE 4: 成功 ════ -->
+<div class="page" id="page4">
+  <div class="success-wrap">
+    <div class="success-circle">
+      <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"></path></svg>
+    </div>
+    <div class="success-title">收货单已提交</div>
+    <div class="success-sub">RCV-2026-0504-001 已归档完成<br>照片正在同步至云端存储…</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num" id="statPhotos">3</div><div class="stat-lbl">照片类型已拍</div></div>
+      <div class="stat-box"><div class="stat-num" id="statCount">3</div><div class="stat-lbl">有效照片数</div></div>
+      <div class="stat-box"><div class="stat-num">118</div><div class="stat-lbl">实收件数</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:#FF8C00">-2</div><div class="stat-lbl">数量差异</div></div>
+    </div>
+    <button class="btn-sub" style="width:100%;margin-bottom:10px" onclick="sendNotify()">发送异常通知</button>
+    <button class="btn-main" style="width:100%;border-radius:22px;height:44px;font-size:15px;font-weight:600;background:var(--blue);color:#fff;border:none;cursor:pointer" onclick="newReceipt()">新建收货单</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let curPage = 0;
+let qty = 118;
+let qualSel = 0;
+let pkgSel = 0;
+const photos = { outer:[], label:[], scene:[], doc:[], damage:[] };
+const MAX_PHOTOS = 6;
+const PAGE_TITLES = ['收货拍照','拍照记录','质量验收','提交确认','收货完成'];
+
+// ── JSSDK (企业微信) ──
+// 实际部署时替换为后端签名接口
+function initWxConfig() {
+  // wx.config({ ... }) 从后端 /api/wx-sign 获取签名后调用
+  // 本地测试时跳过
+  if (typeof wx === 'undefined') return;
+  fetch('/api/wx-sign?url=' + encodeURIComponent(location.href.split('#')[0]))
+    .then(r => r.json())
+    .then(cfg => {
+      wx.config({
+        beta: true,
+        debug: false,
+        appId: cfg.appId,
+        timestamp: cfg.timestamp,
+        nonceStr: cfg.nonceStr,
+        signature: cfg.signature,
+        jsApiList: ['chooseImage', 'getLocalImgData', 'getNetworkType', 'scanQRCode', 'showMenuItems']
+      });
+    });
+}
+
+// ── PHOTO GRIDS ──
+function buildGrid(containerId, key, maxSlots) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  const items = photos[key];
+  const slots = Math.min(items.length + 1, maxSlots);
+  for (let i = 0; i < slots; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'photo-cell';
+    if (i < items.length) {
+      cell.classList.add('taken');
+      const img = document.createElement('img');
+      img.src = items[i];
+      cell.appendChild(img);
+      const badge = document.createElement('div');
+      badge.className = 'photo-badge';
+      badge.textContent = (i + 1) + '/' + items.length;
+      cell.appendChild(badge);
+      const del = document.createElement('div');
+      del.className = 'photo-del';
+      del.innerHTML = '<svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg>';
+      del.onclick = (e) => { e.stopPropagation(); photos[key].splice(i, 1); buildGrid(containerId, key, maxSlots); updateTags(); };
+      cell.appendChild(del);
+    } else {
+      const icon = document.createElement('svg');
+      icon.setAttribute('viewBox','0 0 24 24');
+      icon.classList.add('add-icon');
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>';
+      cell.appendChild(icon);
+      const lbl = document.createElement('span');
+      lbl.className = 'cell-label';
+      lbl.textContent = items.length === 0 ? '点击拍照' : '继续拍';
+      cell.appendChild(lbl);
+      cell.onclick = () => choosePhoto(key, containerId, maxSlots);
+    }
+    container.appendChild(cell);
+  }
+}
+
+function initGrids() {
+  buildGrid('gridOuter', 'outer', 6);
+  buildGrid('gridLabel', 'label', 6);
+  buildGrid('gridScene', 'scene', 4);
+  buildGrid('gridDoc',   'doc',   4);
+  buildGrid('gridDamage','damage',6);
+}
+
+// ── CHOOSE PHOTO ──
+function choosePhoto(key, containerId, maxSlots) {
+  if (typeof wx !== 'undefined') {
+    wx.chooseImage({
+      count: Math.min(9, maxSlots - photos[key].length),
+      sizeType: ['compressed'],
+      sourceType: ['camera', 'album'],
+      success(res) {
+        res.localIds.forEach(id => {
+          wx.getLocalImgData({ localId: id, success(r) {
+            photos[key].push(r.localData.startsWith('data:') ? r.localData : 'data:image/jpeg;base64,' + r.localData);
+            buildGrid(containerId, key, maxSlots);
+            updateTags();
+          }});
+        });
+      }
+    });
+  } else {
+    // 浏览器测试：使用 file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.multiple = true;
+    input.onchange = () => {
+      Array.from(input.files).slice(0, maxSlots - photos[key].length).forEach(f => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          photos[key].push(e.target.result);
+          buildGrid(containerId, key, maxSlots);
+          updateTags();
+        };
+        reader.readAsDataURL(f);
+      });
+    };
+    input.click();
+  }
+}
+
+// ── TAGS UPDATE ──
+function updateTags() {
+  const mustKeys = ['outer','label','scene','doc'];
+  const tagIds = { outer:'tagOuter', label:'tagLabel', scene:'tagScene', doc:'tagDoc' };
+  mustKeys.forEach(k => {
+    const el = document.getElementById(tagIds[k]);
+    if (!el) return;
+    if (photos[k].length > 0) { el.textContent = photos[k].length + '张已拍'; el.className = 'tag tag-done'; }
+    else { el.textContent = '必拍'; el.className = 'tag tag-must'; }
+  });
+}
+
+// ── QTY ──
+function adjQty(d) {
+  qty = Math.max(0, Math.min(300, qty + d));
+  document.getElementById('qtyVal').textContent = qty;
+  const diff = qty - 120;
+  const el = document.getElementById('diffVal');
+  if (diff === 0) { el.textContent = '相符'; el.style.color = '#00B578'; }
+  else if (diff < 0) { el.textContent = diff + ' 件（短少）'; el.style.color = '#FF3141'; }
+  else { el.textContent = '+' + diff + ' 件（溢出）'; el.style.color = '#FF8C00'; }
+}
+
+// ── QUAL / PKG ──
+const qualStyles = ['sel-ok','sel-warn','sel-err'];
+function pickQual(i) {
+  qualSel = i;
+  [0,1,2].forEach(j => {
+    const c = document.getElementById('chip' + j);
+    c.className = 'chip' + (j === i ? ' ' + qualStyles[j] : '');
+  });
+}
+function pickPkg(i) {
+  pkgSel = i;
+  [0,1,2,3].forEach(j => {
+    const c = document.getElementById('pkg' + j);
+    const style = j === 0 ? 'sel-ok' : (j === 1 ? 'sel-warn' : 'sel-err');
+    c.className = 'chip' + (j === i ? ' ' + style : '');
+  });
+}
+
+// ── NAV ──
+const STEP_LABELS = ['确认信息','拍照记录','质量验收','提交归档'];
+function updateSteps(n) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('sd' + i);
+    const lbl = document.getElementById('sl' + i);
+    const step = document.getElementById('s' + i);
+    dot.className = 'step-dot ' + (i < n ? 'done' : i === n ? 'cur' : 'idle');
+    dot.textContent = i < n ? '✓' : (i + 1);
+    lbl.className = 'step-label' + (i < n ? ' done' : i === n ? ' cur' : '');
+    lbl.textContent = STEP_LABELS[i];
+    if (i < 3) {
+      const line = step.querySelector('::after') || step;
+      step.className = 'step' + (i < n ? ' done' : '');
+    }
+  }
+  document.getElementById('navTitle').textContent = PAGE_TITLES[n];
+}
+
+function showPage(n) {
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === n));
+  const stepBar = document.getElementById('stepBar');
+  stepBar.style.display = n === 4 ? 'none' : 'flex';
+  if (n === 4) document.getElementById('navTitle').textContent = '收货完成';
+  else updateSteps(n);
+  curPage = n;
+  window.scrollTo(0, 0);
+}
+
+function goNext() { showPage(curPage + 1); if (curPage === 3) prepSummary(); }
+function goPrev() { showPage(curPage - 1); }
+function goBack() { if (curPage > 0) goPrev(); else history.back(); }
+function navAction() {}
+
+// ── PAGE-SPECIFIC ACTIONS ──
+function selectWarehouse() {
+  const opts = ['A区·原材料仓','B区·成品仓','C区·暂存区','D区·冷链仓'];
+  if (typeof wx !== 'undefined') {
+    wx.invoke('selectEnterpriseContact', {}, () => {});
+  }
+  const val = opts[Math.floor(Math.random() * opts.length)];
+  const el = document.getElementById('warehouseVal');
+  el.textContent = val;
+  el.classList.remove('placeholder');
+}
+
+function scanQR() {
+  if (typeof wx !== 'undefined') {
+    wx.scanQRCode({ needResult: 1, scanType: ['qrCode','barCode'], success(res) {
+      console.log('扫码结果:', res.resultStr);
+    }});
+  } else {
+    alert('扫码功能需在企业微信内使用');
+  }
+}
+
+function checkPhotosAndNext() {
+  const missing = ['outer','label','scene','doc'].filter(k => photos[k].length === 0);
+  if (missing.length > 0) {
+    const names = { outer:'外包装全景', label:'标签特写', scene:'卸货现场', doc:'随货单据' };
+    const msg = '以下必拍项尚未拍摄：\n' + missing.map(k => '· ' + names[k]).join('\n') + '\n\n确定跳过继续？';
+    if (confirm(msg)) goNext();
+  } else {
+    goNext();
+  }
+}
+
+function prepSummary() {
+  const now = new Date();
+  document.getElementById('sumTime').textContent = now.toLocaleDateString('zh-CN') + ' ' + now.toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('sumQty').textContent = qty + ' 件';
+  const diff = qty - 120;
+  const el = document.getElementById('sumDiff');
+  if (diff === 0) { el.textContent = '相符'; el.style.color = '#00B578'; }
+  else if (diff < 0) { el.textContent = diff + ' 件（短少）'; el.style.color = '#FF3141'; }
+  else { el.textContent = '+' + diff + ' 件'; el.style.color = '#FF8C00'; }
+  if (typeof wx !== 'undefined') {
+    wx.invoke('getContext', {}, res => {
+      document.getElementById('sumUser').textContent = res.entry || '当前用户';
+    });
+  } else {
+    document.getElementById('sumUser').textContent = '张伟（测试）';
+  }
+  // 照片清单
+  const list = document.getElementById('photoChecklist');
+  const items = [
+    { key:'outer', name:'外包装全景', must:true },
+    { key:'label', name:'标签/批次号', must:true },
+    { key:'scene', name:'卸货现场',    must:true },
+    { key:'doc',   name:'随货单据',    must:true },
+    { key:'damage',name:'异常损坏',    must:false },
+  ];
+  list.innerHTML = items.map(item => {
+    const n = photos[item.key].length;
+    const ok = n > 0;
+    const preview = ok ? `<img src="${photos[item.key][0]}">` : (item.must ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF3141" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8C8C8" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>');
+    const statusClass = ok ? 'cs-ok' : (item.must ? 'cs-miss' : 'cs-opt');
+    const statusText = ok ? (n + '张已拍') : (item.must ? '未拍' : '未拍/可选');
+    return `<div class="check-item">
+      <div class="check-thumb ${ok ? 'ok' : (item.must ? 'miss' : '')}">${preview}</div>
+      <div class="check-meta"><div class="check-name">${item.name}</div><div class="check-sub">${ok ? '已拍 '+n+' 张' : (item.must?'必拍项，请返回补拍':'可选项，未拍照')}</div></div>
+      <span class="check-status ${statusClass}">${statusText}</span>
+    </div>`;
+  }).join('');
+}
+
+function submitForm() {
+  // 实际部署：上传照片到OSS，再POST表单数据
+  const payload = {
+    receiptNo: 'RCV-2026-0504-001',
+    qty,
+    qualStatus: ['合格入库','待质检','拒收退货'][qualSel],
+    pkgStatus: ['完好','轻微破损','严重破损','受潮'][pkgSel],
+    remark: document.getElementById('remark').value,
+    photos: Object.fromEntries(Object.entries(photos).map(([k,v]) => [k, v.length]))
+  };
+  console.log('提交数据:', payload);
+  // fetch('/api/receipt/submit', { method:'POST', body: JSON.stringify(payload), headers:{'Content-Type':'application/json'} })
+  showPage(4);
+}
+
+function sendNotify() {
+  if (typeof wx !== 'undefined') {
+    wx.invoke('sendChatMessage', {
+      msgtype: 'text',
+      enterChat: true,
+      text: { content: '【收货异常通知】RCV-2026-0504-001\n供应商：华润优选食品有限公司\n差异：短少2件\n请及时跟进处理。' }
+    }, () => {});
+  } else {
+    alert('发送通知功能需在企业微信内使用');
+  }
+}
+
+function newReceipt() {
+  Object.keys(photos).forEach(k => photos[k] = []);
+  qty = 118; qualSel = 0; pkgSel = 0;
+  showPage(0);
+  initGrids();
+  updateTags();
+}
+
+// ── INIT ──
+initWxConfig();
+initGrids();
+adjQty(0);
+</script>
+
+
+</body></html>
